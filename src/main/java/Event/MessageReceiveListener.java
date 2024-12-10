@@ -6,14 +6,10 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 public class MessageReceiveListener extends ListenerAdapter {
   @Override
   public void onMessageReceived(MessageReceivedEvent event) {
-    System.out.printf("[%s] %#s: %s\n",
-            event.getChannel(),
-            event.getAuthor(),
-            event.getMessage().getContentDisplay());
+    if (event.getAuthor().isBot()) return;
 
-    if (event.getMessage().getContentDisplay().equals("!ping")) {
-      event.getChannel().sendMessage("pong").queue();
-    }
+    String mensagemRecebida = event.getMessage().getContentRaw();
+
+    event.getChannel().sendMessage("O "+ event.getAuthor().getName() + " disse " + mensagemRecebida).queue();
   }
-
 }
