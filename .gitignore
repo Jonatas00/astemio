@@ -1,4 +1,5 @@
 .env
+META-INF
 
 target/
 !.mvn/wrapper/maven-wrapper.jar
