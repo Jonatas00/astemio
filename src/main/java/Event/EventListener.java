@@ -13,7 +13,7 @@ import java.util.stream.LongStream;
 public class EventListener extends ListenerAdapter {
   @Override
   public void onMessageReceived(MessageReceivedEvent event) {
-    if (!event.getMessage().getChannelId().equals("1316381986583089182")) return;
+    if (!event.getMessage().getChannelId().equals("1316473764485009510")) return;
     if (event.getAuthor().isBot()) return;
 
     String message = event.getMessage().getContentRaw().trim();
