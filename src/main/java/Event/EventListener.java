@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-import java.util.stream.LongStream;
 
 public class EventListener extends ListenerAdapter {
   @Override
@@ -34,7 +33,7 @@ public class EventListener extends ListenerAdapter {
 
         List<BigInteger> rolls = new ArrayList<>();
         for (BigInteger i = BigInteger.ZERO; i.compareTo(quantity) < 0; i = i.add(BigInteger.ONE)) {
-            rolls.add(randomBigInteger(sides, random).add(BigInteger.ONE));
+          rolls.add(randomBigInteger(sides, random).add(BigInteger.ONE));
         }
 
         BigInteger total = rolls.stream().reduce(BigInteger.ZERO, BigInteger::add);
@@ -53,18 +52,19 @@ public class EventListener extends ListenerAdapter {
       }
     }
   }
-    /**
-     * Generates a random BigInteger value less than the given upper bound.
-     *
-     * @param upperBound the exclusive upper bound for the random value
-     * @param random     the Random instance to use
-     * @return a random BigInteger less than upperBound
-     */
-    private BigInteger randomBigInteger(BigInteger upperBound, Random random) {
-        BigInteger result;
-        do {
-            result = new BigInteger(upperBound.bitLength(), random);
-        } while (result.compareTo(upperBound) >= 0);
-        return result;
-    }
+
+  /**
+   * Generates a random BigInteger value less than the given upper bound.
+   *
+   * @param upperBound the exclusive upper bound for the random value
+   * @param random     the Random instance to use
+   * @return a random BigInteger less than upperBound
+   */
+  private BigInteger randomBigInteger(BigInteger upperBound, Random random) {
+    BigInteger result;
+    do {
+      result = new BigInteger(upperBound.bitLength(), random);
+    } while (result.compareTo(upperBound) >= 0);
+    return result;
+  }
 }
