@@ -1,5 +1,6 @@
 src/main/resources/.env
 META-INF
+.env
 
 target/
 !.mvn/wrapper/maven-wrapper.jar
