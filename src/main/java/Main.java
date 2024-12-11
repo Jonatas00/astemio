@@ -8,7 +8,6 @@ import java.util.EnumSet;
 public class Main {
   public static void main(String[] args) {
     Dotenv dotenv = Dotenv.load();
-
     String token = dotenv.get("BOT_TOKEN");
 
     JDABuilder bot = JDABuilder.createDefault(token);

@@ -12,7 +12,7 @@ import java.util.Random;
 public class EventListener extends ListenerAdapter {
   @Override
   public void onMessageReceived(MessageReceivedEvent event) {
-    if (!event.getMessage().getChannelId().equals("1316473764485009510")) return;
+    if (!event.getMessage().getChannelId().equals("1012026375735083088")) return;
     if (event.getAuthor().isBot()) return;
 
     String message = event.getMessage().getContentRaw().trim();
