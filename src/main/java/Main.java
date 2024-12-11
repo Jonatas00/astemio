@@ -12,6 +12,7 @@ public class Main {
     bot.enableIntents(EnumSet.allOf(GatewayIntent.class));
     bot.addEventListeners(new EventListener());
 
+    System.out.println("test");
     bot.build();
   }
 }
