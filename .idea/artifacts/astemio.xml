@@ -1,5 +1,5 @@
 <component name="ArtifactManager">
-  <artifact type="jar" name="astemio">
+  <artifact type="jar" build-on-make="true" name="astemio">
     <output-path>$PROJECT_DIR$/out/artifacts/astemio</output-path>
     <root id="archive" name="astemio.jar">
       <element id="module-output" name="astemio" />
