@@ -1,70 +1,108 @@
 package event;
 
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
-import java.math.BigInteger;
+import java.awt.*;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class EventListener extends ListenerAdapter {
   @Override
   public void onMessageReceived(MessageReceivedEvent event) {
-    if (!event.getMessage().getChannelId().equals("1012026375735083088")) return;
-    if (event.getAuthor().isBot()) return;
-
     String message = event.getMessage().getContentRaw().trim();
 
-    if (message.matches("\\d+d\\d+")) {
-      Random random = new Random();
-      StringBuilder result = new StringBuilder();
-
+    if (message.matches("^\\d*#?(\\d+d\\d+|\\d+)(\\s*[+\\-*/]\\s*(\\d+d\\d+|\\d+))*$")) {
       try {
-        String[] parts = message.split("d");
-        BigInteger quantity = new BigInteger(parts[0]);
-        BigInteger sides = new BigInteger(parts[1]);
+        String[] parts = message.split("#", 2);
+        int rows = 1;
 
-        if (quantity.compareTo(BigInteger.ZERO) <= 0 || sides.compareTo(BigInteger.ZERO) <= 0) {
-          event.getChannel().sendMessage(event.getAuthor().getAsMention() + " Por favor, insira valores positivos para os dados.").queue();
-          return;
+        if (parts.length > 1) {
+          rows = Integer.parseInt(parts[0]);
+          message = parts[1];
         }
 
-        List<BigInteger> rolls = new ArrayList<>();
-        for (BigInteger i = BigInteger.ZERO; i.compareTo(quantity) < 0; i = i.add(BigInteger.ONE)) {
-          rolls.add(randomBigInteger(sides, random).add(BigInteger.ONE));
+        List<String> expressions = diceParser(message);
+
+        for (int i = 1; i < expressions.size(); i++) {
+          if ("+-*/".contains(expressions.get(i)) && "+-*/".contains(expressions.get(i - 1))) {
+            event.getChannel().sendMessage("Formato inválido: operadores consecutivos não são permitidos.").queue();
+            return;
+          }
         }
 
-        BigInteger total = rolls.stream().reduce(BigInteger.ZERO, BigInteger::add);
-        rolls.sort(Collections.reverseOrder()); // Ordena em ordem decrescente
+        EmbedBuilder embed = new EmbedBuilder();
+        embed.setColor(Color.orange);
 
-        result.append("` ").append(total).append(" `").append(" ⟵ [ ");
-        for (int i = 0; i < rolls.size(); i++) {
-          result.append(rolls.get(i)).append(i < rolls.size() - 1 ? ", " : "");
+        List<String> results = new ArrayList<>();
+        for (int r = 0; r < rows; r++) {
+          Integer total = null;
+          StringBuilder computation = new StringBuilder();
+
+          for (int i = 0; i < expressions.size(); i++) {
+            String expr = expressions.get(i).trim();
+            if (expr.matches("\\d+d\\d+")) {
+              String[] diceParts = expr.split("d");
+              int quantity = Integer.parseInt(diceParts[0]);
+              int sides = Integer.parseInt(diceParts[1]);
+              List<Integer> rolls = IntStream.range(0, quantity)
+                  .mapToObj(j -> new Random().nextInt(sides) + 1)
+                  .collect(Collectors.toList());
+              int sum = rolls.stream().mapToInt(Integer::intValue).sum();
+              computation.append(rolls).append(" ");
+              total = (total == null) ? sum : applyOperator(expressions.get(i - 1), total, sum);
+            } else if (expr.matches("\\d+")) {
+              int value = Integer.parseInt(expr);
+              computation.append(value).append(" ");
+              total = (total == null) ? value : applyOperator(expressions.get(i - 1), total, value);
+            } else if (!"+-*/".contains(expr)) {
+              event.getChannel().sendMessage("Operador inválido: " + expr).queue();
+              return;
+            }
+          }
+
+          if (total != null) {
+            results.add("` " + total + " `" + " ⟵ [" + computation.toString().trim() + "]");
+          } else {
+            event.getChannel().sendMessage("Expressão inválida. Verifique sua entrada.").queue();
+            return;
+          }
         }
-        result.append("] ").append(message);
 
-        event.getChannel().sendMessage(event.getAuthor().getAsMention() + " " + result).queue();
-
+        embed.addField("Jogador:", event.getAuthor().getAsMention(), true);
+        embed.addField("Resultados:", String.join("\n", results), false);
+        event.getChannel().sendMessageEmbeds(embed.build()).queue();
       } catch (NumberFormatException e) {
-        event.getChannel().sendMessage(event.getAuthor().getAsMention() + " Erro ao interpretar os números. Use o formato 'XdY', como '2d6'.").queue();
+        event.getChannel().sendMessage("Erro ao interpretar os números. Use um formato válido como '1d10+2', '2#1d10+3', etc.").queue();
       }
     }
   }
 
-  /**
-   * Generates a random BigInteger value less than the given upper bound.
-   *
-   * @param upperBound the exclusive upper bound for the random value
-   * @param random     the Random instance to use
-   * @return a random BigInteger less than upperBound
-   */
-  private BigInteger randomBigInteger(BigInteger upperBound, Random random) {
-    BigInteger result;
-    do {
-      result = new BigInteger(upperBound.bitLength(), random);
-    } while (result.compareTo(upperBound) >= 0);
-    return result;
+  private int applyOperator(String operator, int left, int right) {
+    return switch (operator) {
+      case "+" -> left + right;
+      case "-" -> left - right;
+      case "*" -> left * right;
+      case "/" -> right != 0 ? left / right : left; // Evita divisão por zero
+      default -> throw new IllegalArgumentException("Operador inválido: " + operator);
+    };
+  }
+
+  private List<String> diceParser(String str) {
+    List<String> parameters = new ArrayList<>();
+    Pattern pat = Pattern.compile("[+\\-*/]|\\d+d\\d+|\\d+");
+    Matcher mat = pat.matcher(str);
+
+    while (mat.find()) {
+      parameters.add(mat.group());
+    }
+
+    return parameters;
   }
 }
