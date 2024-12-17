@@ -22,7 +22,7 @@ public class EventListener extends ListenerAdapter {
     String rawMessage = event.getMessage().getContentRaw().trim();
 
     // Validação do formato do comando
-    if (rawMessage.matches("^\\d*#?(\\d+d\\d+|\\d+)(\\s*[+\\-*/]\\s*(\\d+d\\d+|\\d+))*(\\s+[a-zA-Z0-9 ]+)?$")) {
+    if (rawMessage.matches("^\\d*#?(\\d+d\\d+|\\d+)(\\s*[+\\-*/]\\s*(\\d+d\\d+|\\d+))*(\\s+[\\p{L}\\p{M}0-9\\- ]+)?$")) {
       try {
         String[] splitMessage = rawMessage.split("#", 2);
         int repetitions = 1;
@@ -37,14 +37,15 @@ public class EventListener extends ListenerAdapter {
           expressionPart = splitMessage[0];
         }
 
-        // Divide a expressão e o nome opcional
-        int lastSpaceIndex = expressionPart.lastIndexOf(' ');
+        // Divide expressão matemática e o nome usando regex
+        Pattern pattern = Pattern.compile("^(.*?)(\\s+[\\p{L}\\p{M}0-9\\- ]+)?$");
+        Matcher matcher = pattern.matcher(expressionPart);
+
         String expression = expressionPart;
-        if (lastSpaceIndex > 0) {
-          String possibleName = expressionPart.substring(lastSpaceIndex + 1).trim();
-          if (!possibleName.matches("\\d+d\\d+|\\d+|[+\\-*/]")) {
-            expression = expressionPart.substring(0, lastSpaceIndex).trim();
-            optionalName = possibleName;
+        if (matcher.find()) {
+          expression = matcher.group(1).trim();
+          if (matcher.group(2) != null) {
+            optionalName = matcher.group(2).trim();
           }
         }
 
@@ -76,23 +77,17 @@ public class EventListener extends ListenerAdapter {
               int diceQuantity = Integer.parseInt(diceComponents[0]);
               int diceSides = Integer.parseInt(diceComponents[1]);
 
-              List<Integer> rollResults = IntStream.range(0, diceQuantity)
-                  .mapToObj(roll -> new Random().nextInt(diceSides) + 1)
-                  .collect(Collectors.toList());
+              List<Integer> rollResults = IntStream.range(0, diceQuantity).mapToObj(roll -> new Random().nextInt(diceSides) + 1).collect(Collectors.toList());
               int rollSum = rollResults.stream().mapToInt(Integer::intValue).sum();
 
               rollDetails.append(currentToken).append(": ").append(rollResults).append(" ");
-              runningTotal = (runningTotal == null)
-                  ? rollSum
-                  : applyOperator(parsedExpressions.get(i - 1), runningTotal, rollSum);
+              runningTotal = (runningTotal == null) ? rollSum : applyOperator(parsedExpressions.get(i - 1), runningTotal, rollSum);
 
             } else if (currentToken.matches("\\d+")) {
               // Processa valores numéricos
               int numericValue = Integer.parseInt(currentToken);
               rollDetails.append(numericValue).append(" ");
-              runningTotal = (runningTotal == null)
-                  ? numericValue
-                  : applyOperator(parsedExpressions.get(i - 1), runningTotal, numericValue);
+              runningTotal = (runningTotal == null) ? numericValue : applyOperator(parsedExpressions.get(i - 1), runningTotal, numericValue);
 
             } else if (!"+-*/".contains(currentToken)) {
               // Operador inválido
@@ -109,10 +104,9 @@ public class EventListener extends ListenerAdapter {
           }
         }
 
-
         resultEmbed.addField("Jogador:", event.getAuthor().getAsMention(), true);
         if (!optionalName.isEmpty()) {
-          resultEmbed.addField("Dado:", optionalName, false);
+          resultEmbed.addField("Nome:", optionalName, false);
         }
         resultEmbed.addField("Resultados:", String.join("\n", formattedResults), false);
         event.getChannel().sendMessageEmbeds(resultEmbed.build()).queue();
