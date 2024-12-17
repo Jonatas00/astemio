@@ -59,7 +59,7 @@ public class EventListener extends ListenerAdapter {
         }
 
         EmbedBuilder resultEmbed = new EmbedBuilder();
-        resultEmbed.setColor(Color.blue);
+        resultEmbed.setColor(Color.orange);
         List<String> formattedResults = new ArrayList<>();
 
         // Processa as repetições
