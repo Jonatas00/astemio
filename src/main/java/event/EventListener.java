@@ -102,14 +102,18 @@ public class EventListener extends ListenerAdapter {
           }
 
           if (runningTotal != null) {
-            formattedResults.add((optionalName.isEmpty() ? "" : "**" + optionalName + "** ") + "` " + runningTotal + " ` ⟵ " + rollDetails.toString().trim());
+            formattedResults.add("` " + runningTotal + " ` ⟵ " + rollDetails.toString().trim());
           } else {
             event.getChannel().sendMessage("Expressão inválida. Verifique sua entrada.").queue();
             return;
           }
         }
 
+
         resultEmbed.addField("Jogador:", event.getAuthor().getAsMention(), true);
+        if (!optionalName.isEmpty()) {
+          resultEmbed.addField("Dado:", optionalName, false);
+        }
         resultEmbed.addField("Resultados:", String.join("\n", formattedResults), false);
         event.getChannel().sendMessageEmbeds(resultEmbed.build()).queue();
       } catch (NumberFormatException e) {
