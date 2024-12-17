@@ -22,7 +22,7 @@ public class EventListener extends ListenerAdapter {
     String rawMessage = event.getMessage().getContentRaw().trim();
 
     // Validação do formato do comando
-    if (rawMessage.matches("^\\d*#?(\\d+d\\d+|\\d+)(\\s*[+\\-*/]\\s*(\\d+d\\d+|\\d+))*(\\s+[\\p{L}\\p{M}0-9\\- ]+)?$")) {
+    if (rawMessage.matches("^\\d*#?\\s*(\\d+d\\d+|\\d+)(\\s*[+\\-*/]\\s*(\\d+d\\d+|\\d+))*\\s*(\\s+[\\p{L}\\p{M}0-9\\- ]+)?$")) {
       try {
         String[] splitMessage = rawMessage.split("#", 2);
         int repetitions = 1;
@@ -38,7 +38,7 @@ public class EventListener extends ListenerAdapter {
         }
 
         // Divide expressão matemática e o nome usando regex
-        Pattern pattern = Pattern.compile("^(.*?)(\\s+[\\p{L}\\p{M}0-9\\- ]+)?$");
+        Pattern pattern = Pattern.compile("^([\\d+d\\s\\-*/]+)([\\p{L}\\p{M}0-9\\- ]+)?$");
         Matcher matcher = pattern.matcher(expressionPart);
 
         String expression = expressionPart;
@@ -69,7 +69,7 @@ public class EventListener extends ListenerAdapter {
           StringBuilder rollDetails = new StringBuilder();
 
           for (int i = 0; i < parsedExpressions.size(); i++) {
-            String currentToken = parsedExpressions.get(i).trim();
+            String currentToken = parsedExpressions.get(i).replaceAll("\\s+", "").trim();
 
             if (currentToken.matches("\\d+d\\d+")) {
               // Processa dados
