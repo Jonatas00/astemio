@@ -14,95 +14,128 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class EventListener extends ListenerAdapter {
+
   @Override
   public void onMessageReceived(MessageReceivedEvent event) {
-    String message = event.getMessage().getContentRaw().trim();
+    if (!event.getChannel().getId().equals("1012026375735083088")) return;
 
-    if (message.matches("^\\d*#?(\\d+d\\d+|\\d+)(\\s*[+\\-*/]\\s*(\\d+d\\d+|\\d+))*$")) {
+    String rawMessage = event.getMessage().getContentRaw().trim();
+
+    // Validação do formato do comando
+    if (rawMessage.matches("^\\d*#?(\\d+d\\d+|\\d+)(\\s*[+\\-*/]\\s*(\\d+d\\d+|\\d+))*(\\s+[a-zA-Z0-9 ]+)?$")) {
       try {
-        String[] parts = message.split("#", 2);
-        int rows = 1;
+        String[] splitMessage = rawMessage.split("#", 2);
+        int repetitions = 1;
+        String expressionPart;
+        String optionalName = "";
 
-        if (parts.length > 1) {
-          rows = Integer.parseInt(parts[0]);
-          message = parts[1];
+        // Separa a quantidade de repetições e a expressão
+        if (splitMessage.length > 1) {
+          repetitions = Integer.parseInt(splitMessage[0]);
+          expressionPart = splitMessage[1];
+        } else {
+          expressionPart = splitMessage[0];
         }
 
-        List<String> expressions = diceParser(message);
+        // Divide a expressão e o nome opcional
+        int lastSpaceIndex = expressionPart.lastIndexOf(' ');
+        String expression = expressionPart;
+        if (lastSpaceIndex > 0) {
+          String possibleName = expressionPart.substring(lastSpaceIndex + 1).trim();
+          if (!possibleName.matches("\\d+d\\d+|\\d+|[+\\-*/]")) {
+            expression = expressionPart.substring(0, lastSpaceIndex).trim();
+            optionalName = possibleName;
+          }
+        }
 
-        for (int i = 1; i < expressions.size(); i++) {
-          if ("+-*/".contains(expressions.get(i)) && "+-*/".contains(expressions.get(i - 1))) {
+        List<String> parsedExpressions = parseDiceExpression(expression);
+
+        // Valida operadores consecutivos
+        for (int i = 1; i < parsedExpressions.size(); i++) {
+          if ("+-*/".contains(parsedExpressions.get(i)) && "+-*/".contains(parsedExpressions.get(i - 1))) {
             event.getChannel().sendMessage("Formato inválido: operadores consecutivos não são permitidos.").queue();
             return;
           }
         }
 
-        EmbedBuilder embed = new EmbedBuilder();
-        embed.setColor(Color.orange);
+        EmbedBuilder resultEmbed = new EmbedBuilder();
+        resultEmbed.setColor(Color.blue);
+        List<String> formattedResults = new ArrayList<>();
 
-        List<String> results = new ArrayList<>();
-        for (int r = 0; r < rows; r++) {
-          Integer total = null;
-          StringBuilder computation = new StringBuilder();
+        // Processa as repetições
+        for (int repetition = 0; repetition < repetitions; repetition++) {
+          Integer runningTotal = null;
+          StringBuilder rollDetails = new StringBuilder();
 
-          for (int i = 0; i < expressions.size(); i++) {
-            String expr = expressions.get(i).trim();
-            if (expr.matches("\\d+d\\d+")) {
-              String[] diceParts = expr.split("d");
-              int quantity = Integer.parseInt(diceParts[0]);
-              int sides = Integer.parseInt(diceParts[1]);
-              List<Integer> rolls = IntStream.range(0, quantity)
-                  .mapToObj(j -> new Random().nextInt(sides) + 1)
+          for (int i = 0; i < parsedExpressions.size(); i++) {
+            String currentToken = parsedExpressions.get(i).trim();
+
+            if (currentToken.matches("\\d+d\\d+")) {
+              // Processa dados
+              String[] diceComponents = currentToken.split("d");
+              int diceQuantity = Integer.parseInt(diceComponents[0]);
+              int diceSides = Integer.parseInt(diceComponents[1]);
+
+              List<Integer> rollResults = IntStream.range(0, diceQuantity)
+                  .mapToObj(roll -> new Random().nextInt(diceSides) + 1)
                   .collect(Collectors.toList());
-              int sum = rolls.stream().mapToInt(Integer::intValue).sum();
-              computation.append(rolls).append(" ");
-              total = (total == null) ? sum : applyOperator(expressions.get(i - 1), total, sum);
-            } else if (expr.matches("\\d+")) {
-              int value = Integer.parseInt(expr);
-              computation.append(value).append(" ");
-              total = (total == null) ? value : applyOperator(expressions.get(i - 1), total, value);
-            } else if (!"+-*/".contains(expr)) {
-              event.getChannel().sendMessage("Operador inválido: " + expr).queue();
+              int rollSum = rollResults.stream().mapToInt(Integer::intValue).sum();
+
+              rollDetails.append(currentToken).append(": ").append(rollResults).append(" ");
+              runningTotal = (runningTotal == null)
+                  ? rollSum
+                  : applyOperator(parsedExpressions.get(i - 1), runningTotal, rollSum);
+
+            } else if (currentToken.matches("\\d+")) {
+              // Processa valores numéricos
+              int numericValue = Integer.parseInt(currentToken);
+              rollDetails.append(numericValue).append(" ");
+              runningTotal = (runningTotal == null)
+                  ? numericValue
+                  : applyOperator(parsedExpressions.get(i - 1), runningTotal, numericValue);
+
+            } else if (!"+-*/".contains(currentToken)) {
+              // Operador inválido
+              event.getChannel().sendMessage("Operador inválido: " + currentToken).queue();
               return;
             }
           }
 
-          if (total != null) {
-            results.add("` " + total + " `" + " ⟵ [" + computation.toString().trim() + "]");
+          if (runningTotal != null) {
+            formattedResults.add((optionalName.isEmpty() ? "" : "**" + optionalName + "** ") + "` " + runningTotal + " ` ⟵ " + rollDetails.toString().trim());
           } else {
             event.getChannel().sendMessage("Expressão inválida. Verifique sua entrada.").queue();
             return;
           }
         }
 
-        embed.addField("Jogador:", event.getAuthor().getAsMention(), true);
-        embed.addField("Resultados:", String.join("\n", results), false);
-        event.getChannel().sendMessageEmbeds(embed.build()).queue();
+        resultEmbed.addField("Jogador:", event.getAuthor().getAsMention(), true);
+        resultEmbed.addField("Resultados:", String.join("\n", formattedResults), false);
+        event.getChannel().sendMessageEmbeds(resultEmbed.build()).queue();
       } catch (NumberFormatException e) {
         event.getChannel().sendMessage("Erro ao interpretar os números. Use um formato válido como '1d10+2', '2#1d10+3', etc.").queue();
       }
     }
   }
 
-  private int applyOperator(String operator, int left, int right) {
+  private int applyOperator(String operator, int leftOperand, int rightOperand) {
     return switch (operator) {
-      case "+" -> left + right;
-      case "-" -> left - right;
-      case "*" -> left * right;
-      case "/" -> right != 0 ? left / right : left; // Evita divisão por zero
+      case "+" -> leftOperand + rightOperand;
+      case "-" -> leftOperand - rightOperand;
+      case "*" -> leftOperand * rightOperand;
+      case "/" -> rightOperand != 0 ? leftOperand / rightOperand : leftOperand;
       default -> throw new IllegalArgumentException("Operador inválido: " + operator);
     };
   }
 
-  private List<String> diceParser(String str) {
-    List<String> parameters = new ArrayList<>();
-    Pattern pat = Pattern.compile("[+\\-*/]|\\d+d\\d+|\\d+");
-    Matcher mat = pat.matcher(str);
+  private List<String> parseDiceExpression(String expression) {
+    List<String> parsedTokens = new ArrayList<>();
+    Pattern tokenPattern = Pattern.compile("[+\\-*/]|\\d+d\\d+|\\d+");
+    Matcher tokenMatcher = tokenPattern.matcher(expression);
 
-    while (mat.find()) {
-      parameters.add(mat.group());
+    while (tokenMatcher.find()) {
+      parsedTokens.add(tokenMatcher.group());
     }
-
-    return parameters;
+    return parsedTokens;
   }
 }
