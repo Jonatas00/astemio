@@ -9,6 +9,6 @@ public class Logger extends ListenerAdapter {
   public void onMessageReceived(MessageReceivedEvent event) {
     if (event.getMessage().getAuthor().isBot()) return;
 
-    System.out.printf("[%s] - [%s] - [%s]: %s\n", event.getMessage().getGuild().getName(), event.getMessage().getChannelId(), event.getAuthor().getName(), event.getMessage().getContentRaw());
+    System.out.printf("[%s] - [%s] - [%s]: %s\n", event.getMessage().getGuild().getName(), event.getMessage().getChannel().getName(), event.getAuthor().getName(), event.getMessage().getContentRaw());
   }
 }
