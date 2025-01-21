@@ -11,6 +11,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 
 import commands.utils.*;
 
@@ -19,13 +20,13 @@ public class Dice {
     String message = event.getMessage().getContentRaw();
     try {
       String[] splitMessage = message.split("#", 2);
-      int repetitions = 1;
+      long repetitions = 1;
       String expressionPart;
       String optionalName = "";
 
       // Separa a quantidade de repetições e a expressão
       if (splitMessage.length > 1) {
-        repetitions = Integer.parseInt(splitMessage[0].trim());
+        repetitions = Long.parseLong(splitMessage[0].trim());
         expressionPart = splitMessage[1];
       } else {
         expressionPart = splitMessage[0];
@@ -59,7 +60,7 @@ public class Dice {
 
       // Processa as repetições
       for (int repetition = 0; repetition < repetitions; repetition++) {
-        Integer runningTotal = null;
+        Long runningTotal = null;
         StringBuilder rollDetails = new StringBuilder();
 
         for (int i = 0; i < parsedExpressions.size(); i++) {
@@ -68,20 +69,20 @@ public class Dice {
           if (currentToken.matches("\\d+d\\d+")) {
             // Processa dados
             String[] diceComponents = currentToken.split("d");
-            int diceQuantity = Integer.parseInt(diceComponents[0]);
-            int diceSides = Integer.parseInt(diceComponents[1]);
+            long diceQuantity = Long.parseLong(diceComponents[0]);
+            long diceSides = Long.parseLong(diceComponents[1]);
 
-            List<Integer> rollResults = IntStream.range(0, diceQuantity)
-                    .mapToObj(roll -> new Random().nextInt(diceSides) + 1)
+            List<Long> rollResults = LongStream.range(0, diceQuantity)
+                    .mapToObj(roll -> new Random().nextLong(diceSides) + 1)
                     .collect(Collectors.toList());
-            int rollSum = rollResults.stream().mapToInt(Integer::intValue).sum();
+            long rollSum = rollResults.stream().mapToLong(Long::longValue).sum();
 
             rollDetails.append(currentToken).append(": ").append(rollResults).append(" ");
             runningTotal = (runningTotal == null) ? rollSum : DiceUtils.applyOperator(parsedExpressions.get(i - 1), runningTotal, rollSum);
 
           } else if (currentToken.matches("\\d+")) {
             // Processa valores numéricos
-            int numericValue = Integer.parseInt(currentToken);
+            long numericValue = Long.parseLong(currentToken);
             rollDetails.append(numericValue).append(" ");
             runningTotal = (runningTotal == null) ? numericValue : DiceUtils.applyOperator(parsedExpressions.get(i - 1), runningTotal, numericValue);
 

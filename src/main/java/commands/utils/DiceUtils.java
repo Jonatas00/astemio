@@ -6,7 +6,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class DiceUtils {
-  public static int applyOperator(String operator, int leftOperand, int rightOperand) {
+  public static long applyOperator(String operator, long leftOperand, long rightOperand) {
     return switch (operator) {
       case "+" -> leftOperand + rightOperand;
       case "-" -> leftOperand - rightOperand;
